@@ -17,6 +17,19 @@ def extract_video_id(url):
     else:
         return None
 
+@app.route('/test_youtube_connection')
+def test_youtube_connection():
+    import requests
+    try:
+        response = requests.get('https://www.youtube.com', timeout=5)
+        if response.status_code == 200:
+            return 'Connected to YouTube successfully.'
+        else:
+            return f'Failed to connect to YouTube. Status code: {response.status_code}'
+    except Exception as e:
+        return f'An error occurred: {e}'
+
+
 @app.route('/get_transcript', methods=['POST'])
 def get_transcript():
     data = request.get_json()
