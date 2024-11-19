@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify
 from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_transcript_api._api import TranscriptApi
 import re
 import requests
 import os
@@ -42,12 +41,12 @@ if PROXY_ADDRESS and PROXY_PORT:
     session = requests.Session()
     session.proxies.update(proxies)
 
-    # Update the TranscriptApi session
-    TranscriptApi._session = session
+    # Update the YouTubeTranscriptApi session
+    YouTubeTranscriptApi._session = session
 else:
     # No proxy configuration
     session = requests.Session()
-    TranscriptApi._session = session
+    YouTubeTranscriptApi._session = session
 
 @app.route('/get_transcript', methods=['POST'])
 def get_transcript():
