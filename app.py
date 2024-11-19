@@ -1,10 +1,14 @@
 from flask import Flask, request, jsonify
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._api import TranscriptApi
 import re
+import requests
 import os
-
+import logging
 
 app = Flask(__name__)
+
+logging.basicConfig(level=logging.DEBUG)
 
 def extract_video_id(url):
     """
@@ -17,18 +21,33 @@ def extract_video_id(url):
     else:
         return None
 
-@app.route('/test_youtube_connection')
-def test_youtube_connection():
-    import requests
-    try:
-        response = requests.get('https://www.youtube.com', timeout=5)
-        if response.status_code == 200:
-            return 'Connected to YouTube successfully.'
-        else:
-            return f'Failed to connect to YouTube. Status code: {response.status_code}'
-    except Exception as e:
-        return f'An error occurred: {e}'
+# Get proxy details from environment variables
+PROXY_USER = os.environ.get('PROXY_USER')
+PROXY_PASS = os.environ.get('PROXY_PASS')
+PROXY_ADDRESS = os.environ.get('PROXY_ADDRESS', 'brd.superproxy.io')
+PROXY_PORT = os.environ.get('PROXY_PORT', '22225')
 
+if PROXY_ADDRESS and PROXY_PORT:
+    if PROXY_USER and PROXY_PASS:
+        proxy_auth = f'{PROXY_USER}:{PROXY_PASS}@'
+    else:
+        proxy_auth = ''
+    proxy_url = f'http://{proxy_auth}{PROXY_ADDRESS}:{PROXY_PORT}'
+    proxies = {
+        'http': proxy_url,
+        'https': proxy_url
+    }
+
+    # Create a session with proxies
+    session = requests.Session()
+    session.proxies.update(proxies)
+
+    # Update the TranscriptApi session
+    TranscriptApi._session = session
+else:
+    # No proxy configuration
+    session = requests.Session()
+    TranscriptApi._session = session
 
 @app.route('/get_transcript', methods=['POST'])
 def get_transcript():
@@ -45,10 +64,9 @@ def get_transcript():
         transcript = YouTubeTranscriptApi.get_transcript(video_id)
         return jsonify({'transcript': transcript})
     except Exception as e:
+        logging.exception("Error fetching transcript")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
-
-
+    app.run(host='0.0.0.0', port=port)
